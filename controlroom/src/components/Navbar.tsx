@@ -106,6 +106,29 @@ export default function Navbar() {
                 >
                   Notes
                 </Link>
+                <div className="relative group">
+                  <button
+                    className="text-gray-500 flex items-center rounded-md hover:bg-gray-100 hover:text-black py-4 px-2"
+                  >
+                    Media <span className="ml-1 text-xs">▼</span>
+                  </button>
+                  <div 
+                    className="absolute hidden group-hover:block top-full left-0 bg-white shadow-lg rounded-md py-2 w-48 z-10"
+                  >
+                    <Link
+                      href="/media/tv"
+                      className="block px-4 py-2 text-gray-500 hover:bg-gray-100 hover:text-black"
+                    >
+                      TV Shows Collection
+                    </Link>
+                    <Link
+                      href="/media/movie"
+                      className="block px-4 py-2 text-gray-500 hover:bg-gray-100 hover:text-black"
+                    >
+                      Movies Collection
+                    </Link>
+                  </div>
+                </div>
               </>
             )}
           </div>

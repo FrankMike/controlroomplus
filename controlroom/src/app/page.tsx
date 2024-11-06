@@ -79,6 +79,32 @@ export default function Home() {
               </p>
             </div>
           </Link>
+
+
+          {/* Movies Card */}
+          <Link href="/media/movie" className="block">
+            <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-semibold text-gray-800">🎥 Movies</h2>
+              </div>
+              <p className="text-gray-600">
+                Explore and manage your collection of movies.
+              </p>
+            </div>
+          </Link>
+
+          {/* TV Shows Card */}
+          <Link href="/media/tv" className="block">
+            <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-semibold text-gray-800">📺 TV Shows</h2>
+              </div>
+              <p className="text-gray-600">
+                Explore and manage your collection of TV shows.
+              </p>
+            </div>
+          </Link>
+
         </div>
       )}
 
