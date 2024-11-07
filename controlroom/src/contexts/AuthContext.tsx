@@ -20,17 +20,15 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
 
   const checkAuthStatus = async () => {
     try {
       const response = await fetch('/api/auth/me', {
         credentials: 'include'
       });
+      
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
@@ -40,10 +38,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsAuthenticated(false);
       }
     } catch (error) {
+      console.error('Auth check error:', error);
       setUser(null);
       setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
 
   const login = async () => {
     await checkAuthStatus();
@@ -62,6 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Logout error:', error);
     }
   };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>

@@ -25,7 +25,7 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({
-      id: user._id,
+      _id: user._id,
       username: user.username,
       name: user.name,
       surname: user.surname,
@@ -71,7 +71,7 @@ export async function PUT(req: Request) {
     }
 
     return NextResponse.json({
-      id: updatedUser._id,
+      _id: updatedUser._id,
       username: updatedUser.username,
       name: updatedUser.name,
       surname: updatedUser.surname,

@@ -6,6 +6,10 @@ const protectedRoutes = [
   '/dashboard',
   '/profile',
   '/api/protected-route',
+  '/notes/:path*',
+  '/diary/:path*',
+  '/finance/:path*',
+  '/media/:path*',
   // Add other protected routes
 ];
 

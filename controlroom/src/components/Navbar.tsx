@@ -110,7 +110,7 @@ export default function Navbar() {
                   <button
                     className="text-gray-500 flex items-center rounded-md hover:bg-gray-100 hover:text-black py-4 px-2"
                   >
-                    Media <span className="ml-1 text-xs">▼</span>
+                  Media <span className="ml-1 text-xs">▼</span>
                   </button>
                   <div 
                     className="absolute hidden group-hover:block top-full left-0 bg-white shadow-lg rounded-md py-2 w-48 z-10"

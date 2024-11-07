@@ -72,10 +72,10 @@ export default function Home() {
           <Link href="/notes" className="block">
             <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-semibold text-gray-800">📝 Notes</h2>
+                <h2 className="text-2xl font-semibold text-gray-800">📝 Therapy Notes</h2>
               </div>
               <p className="text-gray-600">
-                Keep track of your ideas, thoughts, and important information in your notes.
+                Keep track of your ideas, thoughts, and important information that you want to share with your therapist.
               </p>
             </div>
           </Link>
