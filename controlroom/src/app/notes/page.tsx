@@ -27,8 +27,6 @@ export default function NotesPage() {
       return;
     }
     
-    console.log('Fetching notes for user:', user);
-    
     try {
       const response = await fetch('/api/notes', {
         credentials: 'include',
@@ -44,7 +42,6 @@ export default function NotesPage() {
       }
       
       const data = await response.json();
-      console.log('Fetched notes:', data);
       setNotes(data);
       // Expand the most recent note if it exists
       if (data.length > 0) {
@@ -91,13 +88,13 @@ export default function NotesPage() {
       });
       
       const responseData = await response.json();
-      console.log('Server response:', responseData);
+      // console.log('Server response:', responseData);
       
       if (!response.ok) {
         throw new Error(responseData.error || 'Failed to save note');
       }
       
-      console.log('Note saved successfully:', responseData);
+      // console.log('Note saved successfully:', responseData);
       
       await checkAndFetchNotes();
       setIsModalOpen(false);

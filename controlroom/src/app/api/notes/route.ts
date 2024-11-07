@@ -38,10 +38,8 @@ async function getCurrentUser(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    console.log('GET /api/notes - Headers:', Object.fromEntries(request.headers));
     
     const user = await getCurrentUser(request);
-    console.log('GET /api/notes - User:', user);
     
     if (!user) {
       console.log('GET /api/notes - Unauthorized: No user found');
@@ -53,7 +51,6 @@ export async function GET(request: Request) {
       .sort({ sessionDate: -1 })
       .lean();
 
-    console.log(`GET /api/notes - Found ${notes.length} notes`);
     return NextResponse.json(notes);
   } catch (error) {
     console.error('Failed to fetch notes:', error);
