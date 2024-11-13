@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { ChevronUp, ChevronDown } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface AudioStream {
   language: string;
@@ -34,6 +36,9 @@ interface Movie {
   plexId: string;
 }
 
+type SortField = 'title' | 'year' | 'duration' | 'fileSize' | 'resolution' | 'videoCodec';
+type SortDirection = 'asc' | 'desc';
+
 export default function MoviePage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
@@ -41,6 +46,8 @@ export default function MoviePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
+  const [sortField, setSortField] = useState<SortField>('title');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const fetchMovies = async () => {
     setIsLoading(true);
@@ -95,8 +102,69 @@ export default function MoviePage() {
     fetchMovies();
   }, [isAuthenticated, router]);
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortedMovies = () => {
+    return [...movies].sort((a, b) => {
+      const direction = sortDirection === 'asc' ? 1 : -1;
+      
+      switch (sortField) {
+        case 'title':
+          return direction * a.title.localeCompare(b.title);
+        case 'year':
+          return direction * ((a.year || 0) - (b.year || 0));
+        case 'duration':
+          return direction * (a.duration - b.duration);
+        case 'fileSize':
+          return direction * (a.fileSize - b.fileSize);
+        case 'resolution': {
+          const resOrder = { '4K': 4, '1080p': 3, '720p': 2, 'SD': 1, 'Unknown': 0 };
+          const aVal = resOrder[a.resolution as keyof typeof resOrder] || 0;
+          const bVal = resOrder[b.resolution as keyof typeof resOrder] || 0;
+          return direction * (aVal - bVal);
+        }
+        case 'videoCodec':
+          return direction * a.videoCodec.localeCompare(b.videoCodec);
+        default:
+          return 0;
+      }
+    });
+  };
+
+  const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead
+      className="font-semibold text-gray-900 text-center cursor-pointer group"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center justify-center gap-1">
+        {children}
+        <span className="text-gray-400">
+          {sortField === field ? (
+            sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+          ) : (
+            <ChevronUp className="w-4 h-4 opacity-0 group-hover:opacity-50" />
+          )}
+        </span>
+      </div>
+    </TableHead>
+  );
+
   if (isLoading) {
-    return <div className="container mx-auto py-8">Loading...</div>;
+    return (
+      <div className="container mx-auto py-8">
+        <div className="border rounded-lg overflow-hidden bg-white shadow-sm p-8">
+          <LoadingSpinner />
+          <p className="text-center text-gray-500 mt-4">Loading movies...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -134,44 +202,68 @@ export default function MoviePage() {
         <Button
           onClick={syncMovies}
           disabled={isSyncing}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
         >
           {isSyncing ? 'Syncing...' : 'Sync with Plex'}
         </Button>
       </div>
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Year</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Size</TableHead>
-              <TableHead>Resolution</TableHead>
-              <TableHead>Dimensions</TableHead>
-              <TableHead>Video Codec</TableHead>
-              <TableHead>Audio</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {movies.map((movie) => (
-              <TableRow key={movie.plexId}>
-                <TableCell>{decodeHTMLEntities(movie.title) || 'Unknown'}</TableCell>
-                <TableCell>{movie.year || '-'}</TableCell>
-                <TableCell>{formatDuration(movie.duration)}</TableCell>
-                <TableCell className="whitespace-nowrap">{formatFileSize(movie.fileSize)}</TableCell>
-                <TableCell>{movie.resolution || 'Unknown'}</TableCell>
-                <TableCell>{movie.dimensions || 'Unknown'}</TableCell>
-                <TableCell>{movie.videoCodec || 'Unknown'}</TableCell>
-                <TableCell>
-                  {movie.audioStreams && movie.audioStreams.length > 0
-                    ? movie.audioStreams.map(formatAudioStream).join(', ')
-                    : 'No audio streams'}
-                </TableCell>
+      <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50 border-b border-gray-200">
+                <SortHeader field="title">Title</SortHeader>
+                <SortHeader field="year">Year</SortHeader>
+                <SortHeader field="duration">Duration</SortHeader>
+                <SortHeader field="fileSize">Size</SortHeader>
+                <SortHeader field="resolution">Resolution</SortHeader>
+                <TableHead className="font-semibold text-gray-900 text-center">Dimensions</TableHead>
+                <SortHeader field="videoCodec">Video Codec</SortHeader>
+                <TableHead className="font-semibold text-gray-900">Audio</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {getSortedMovies().map((movie) => (
+                <TableRow 
+                  key={movie.plexId}
+                  className="hover:bg-gray-50 transition-colors"
+                >
+                  <TableCell className="font-medium">{decodeHTMLEntities(movie.title) || 'Unknown'}</TableCell>
+                  <TableCell className="text-center">{movie.year || '-'}</TableCell>
+                  <TableCell className="text-center">{formatDuration(movie.duration)}</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">{formatFileSize(movie.fileSize)}</TableCell>
+                  <TableCell className="text-center">
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                      {movie.resolution || 'Unknown'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-center">{movie.dimensions || 'Unknown'}</TableCell>
+                  <TableCell className="text-center">
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                      {movie.videoCodec || 'Unknown'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {movie.audioStreams && movie.audioStreams.length > 0
+                        ? movie.audioStreams.map((stream, index) => (
+                            <span 
+                              key={index}
+                              className="px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700"
+                            >
+                              {formatAudioStream(stream)}
+                            </span>
+                          ))
+                        : <span className="text-gray-500">No audio streams</span>
+                      }
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );
