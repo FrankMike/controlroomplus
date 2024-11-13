@@ -165,6 +165,18 @@ export default function MoviePage() {
     </TableHead>
   );
 
+  const calculateTotalSize = (movies: Movie[]) => {
+    const totalBytes = movies.reduce((acc, movie) => acc + (movie.fileSize || 0), 0);
+    const totalTerabytes = totalBytes / (1024 * 1024 * 1024 * 1024); // Convert to TB
+    
+    if (totalTerabytes < 1) {
+      const totalGigabytes = totalBytes / (1024 * 1024 * 1024); // Convert to GB
+      return `${totalGigabytes.toFixed(2)} GB`;
+    }
+    
+    return `${totalTerabytes.toFixed(2)} TB`;
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8">
@@ -228,8 +240,10 @@ export default function MoviePage() {
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
-        <div className="mt-2 text-sm text-gray-500">
-          {getFilteredMovies().length} movies found
+        <div className="mt-2 text-sm text-gray-500 flex items-center gap-4">
+          <span>{getFilteredMovies().length} movies found</span>
+          <span className="w-px h-4 bg-gray-300" />
+          <span>Total size: {calculateTotalSize(getFilteredMovies())}</span>
         </div>
       </div>
 
