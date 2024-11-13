@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown, Search } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface AudioStream {
@@ -48,6 +48,7 @@ export default function MoviePage() {
   const { toast } = useToast();
   const [sortField, setSortField] = useState<SortField>('title');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchMovies = async () => {
     setIsLoading(true);
@@ -111,8 +112,16 @@ export default function MoviePage() {
     }
   };
 
-  const getSortedMovies = () => {
-    return [...movies].sort((a, b) => {
+  const getFilteredMovies = () => {
+    const filtered = movies.filter(movie => 
+      movie.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (movie.year && movie.year.toString().includes(searchQuery))
+    );
+    return getSortedMovies(filtered);
+  };
+
+  const getSortedMovies = (moviesToSort = movies) => {
+    return [...moviesToSort].sort((a, b) => {
       const direction = sortDirection === 'asc' ? 1 : -1;
       
       switch (sortField) {
@@ -208,6 +217,22 @@ export default function MoviePage() {
         </Button>
       </div>
 
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <input
+            type="text"
+            placeholder="Search movies..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <div className="mt-2 text-sm text-gray-500">
+          {getFilteredMovies().length} movies found
+        </div>
+      </div>
+
       <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
         <div className="overflow-x-auto">
           <Table>
@@ -224,7 +249,7 @@ export default function MoviePage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {getSortedMovies().map((movie) => (
+              {getFilteredMovies().map((movie) => (
                 <TableRow 
                   key={movie.plexId}
                   className="hover:bg-gray-50 transition-colors"
@@ -265,6 +290,12 @@ export default function MoviePage() {
           </Table>
         </div>
       </div>
+
+      {getFilteredMovies().length === 0 && (
+        <div className="text-center py-8 text-gray-500">
+          No movies found matching "{searchQuery}"
+        </div>
+      )}
     </div>
   );
 }

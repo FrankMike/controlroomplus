@@ -116,16 +116,16 @@ export default function Navbar() {
                     className="absolute hidden group-hover:block top-full left-0 bg-white shadow-lg rounded-md py-2 w-48 z-10"
                   >
                     <Link
-                      href="/media/tv"
-                      className="block px-4 py-2 text-gray-500 hover:bg-gray-100 hover:text-black"
-                    >
-                      TV Shows Collection
-                    </Link>
-                    <Link
                       href="/media/movie"
                       className="block px-4 py-2 text-gray-500 hover:bg-gray-100 hover:text-black"
                     >
                       Movies Collection
+                    </Link>
+                    <Link
+                      href="/media/tv"
+                      className="block px-4 py-2 text-gray-500 hover:bg-gray-100 hover:text-black"
+                    >
+                      TV Shows Collection
                     </Link>
                   </div>
                 </div>
