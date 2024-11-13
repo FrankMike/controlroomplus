@@ -35,7 +35,7 @@ A modern personal management application built with Next.js and TypeScript, desi
 
 ## Technology Stack
 
-- **Frontend & Backend**: Next.js 14 with TypeScript
+- **Frontend & Backend**: Next.js with TypeScript
 - **Authentication**: Built-in authentication system
 - **Database**: MongoDB
 - **Styling**: Tailwind CSS
