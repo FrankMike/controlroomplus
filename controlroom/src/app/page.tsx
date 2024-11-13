@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useMovieStats } from '@/hooks/useMovieStats';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { useTvShowStats } from '@/hooks/useTvShowStats';
 
 export default function Home() {
   const [userData, setUserData] = useState<{ name?: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { totalCount, totalSize, isLoading: isLoadingMovies } = useMovieStats();
+  const { totalShows, totalEpisodes, totalSize: tvShowTotalSize, isLoading: isLoadingTvShows } = useTvShowStats();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -118,9 +120,33 @@ export default function Home() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-semibold text-gray-800">📺 TV Shows</h2>
               </div>
-              <p className="text-gray-600">
+              <p className="text-gray-600 mb-3">
                 Explore and manage your collection of TV shows.
               </p>
+              {isLoadingTvShows ? (
+                <div className="text-sm text-gray-500">Loading stats...</div>
+              ) : (
+                <div className="text-sm text-gray-500 flex gap-3">
+                  <span className="flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    {totalShows} shows
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h18M3 16h18" />
+                    </svg>
+                    {totalEpisodes} episodes
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                    {tvShowTotalSize}
+                  </span>
+                </div>
+              )}
             </div>
           </Link>
 

@@ -58,7 +58,6 @@ export class PlexAPI {
   }
 
   async getMovies(sectionId?: string) {
-    // Get the movie library section if not provided
     if (!sectionId) {
       const sections = await this.fetch('library/sections');
       const movieSection = sections.MediaContainer.Directory.find(
@@ -70,12 +69,10 @@ export class PlexAPI {
       sectionId = movieSection.key;
     }
 
-    // Get all movies in the section
     const moviesData = await this.fetch(`library/sections/${sectionId}/all`);
     const videos = moviesData.MediaContainer.Video;
     const movieList = Array.isArray(videos) ? videos : [videos];
 
-    // Fetch detailed metadata for each movie
     const detailedMovies = await Promise.all(
       movieList.map(async (movie: any) => {
         const metadata = await this.fetch(`library/metadata/${movie.ratingKey}`);
@@ -83,7 +80,6 @@ export class PlexAPI {
         const media = Array.isArray(video.Media) ? video.Media[0] : video.Media;
         const part = media?.Part ? (Array.isArray(media.Part) ? media.Part[0] : media.Part) : null;
 
-        // Filter and format audio streams
         const audioStreams = part?.Stream
           ?.filter((stream: any) => 
             stream.streamType === '2' && 
@@ -95,7 +91,6 @@ export class PlexAPI {
             channels: parseInt(stream.channels) || 2,
           })) || [];
 
-        // Format video resolution with better fallbacks
         const resolution = media?.videoResolution 
           ? (media.videoResolution === '1080' ? '1080p' : media.videoResolution.toUpperCase())
           : 'Unknown';
@@ -128,6 +123,97 @@ export class PlexAPI {
     }
     
     return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+  }
+
+  async getTvShows() {
+    try {
+      // Get library sections
+      const sections = await this.fetch('library/sections');
+      const tvSection = sections.MediaContainer.Directory.find(
+        (section: any) => section.type === 'show'
+      );
+
+      if (!tvSection) {
+        throw new Error('No TV show section found in Plex library');
+      }
+
+      // Get all shows in the section
+      const showsData = await this.fetch(`library/sections/${tvSection.key}/all`);
+      const shows = showsData.MediaContainer.Directory;
+      const showList = Array.isArray(shows) ? shows : [shows];
+
+      // Process each show
+      const processedShows = await Promise.all(
+        showList.map(async (show: any) => {
+          try {
+            // Get seasons
+            const seasonsData = await this.fetch(`library/metadata/${show.ratingKey}/children`);
+            const seasons = seasonsData.MediaContainer.Directory;
+            const seasonList = Array.isArray(seasons) ? seasons : [seasons];
+
+            let totalEpisodes = 0;
+            let totalFileSize = 0;
+            let processedSeasons = [];
+
+            for (const season of seasonList) {
+              if (season.title === 'All episodes') continue;
+
+              // Get episodes
+              const episodesData = await this.fetch(`library/metadata/${season.ratingKey}/children`);
+              const episodes = episodesData.MediaContainer.Video;
+              const episodeList = Array.isArray(episodes) ? episodes : [episodes];
+
+              const processedEpisodes = episodeList.map((episode: any) => {
+                const media = Array.isArray(episode.Media) ? episode.Media[0] : episode.Media;
+                const part = Array.isArray(media.Part) ? media.Part[0] : media.Part;
+                const fileSize = parseInt(part?.size || '0');
+                totalFileSize += fileSize;
+
+                return {
+                  title: episode.title,
+                  seasonNumber: parseInt(season.index),
+                  episodeNumber: parseInt(episode.index),
+                  duration: Math.round(parseInt(episode.duration || '0') / 60000),
+                  fileSize,
+                  resolution: media.videoResolution === '1080' 
+                    ? '1080p' 
+                    : media.videoResolution?.toUpperCase(),
+                  videoCodec: media.videoCodec?.toUpperCase(),
+                  plexId: episode.ratingKey,
+                };
+              });
+
+              totalEpisodes += processedEpisodes.length;
+              processedSeasons.push({
+                seasonNumber: parseInt(season.index),
+                episodeCount: processedEpisodes.length,
+                episodes: processedEpisodes,
+                plexId: season.ratingKey,
+              });
+            }
+
+            return {
+              title: show.title,
+              year: parseInt(show.year) || null,
+              seasonCount: processedSeasons.length,
+              episodeCount: totalEpisodes,
+              totalDuration: Math.round(parseInt(show.duration || '0') / 60000),
+              totalFileSize,
+              seasons: processedSeasons,
+              plexId: show.ratingKey,
+            };
+          } catch (error) {
+            console.error(`Error processing show ${show.title}:`, error);
+            return null;
+          }
+        })
+      );
+
+      return processedShows.filter(show => show !== null);
+    } catch (error) {
+      console.error('Error in getTvShows:', error);
+      throw error;
+    }
   }
 }
 
