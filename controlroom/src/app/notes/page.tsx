@@ -7,6 +7,7 @@ import NoteModal from '@/components/NoteModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import React from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 export default function NotesPage() {
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
@@ -131,7 +132,11 @@ export default function NotesPage() {
   };
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    return (
+      <div className="container mx-auto p-6">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   return (
