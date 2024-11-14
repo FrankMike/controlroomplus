@@ -1,171 +1,145 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-
-interface UserData {
-  username?: string;
-  name?: string;
-}
+import { usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useState } from 'react';
 
 export default function Navbar() {
-  const [user, setUser] = useState<UserData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
   const pathname = usePathname();
+  const { isAuthenticated, isLoading, logout } = useAuth();
+  const [isMediaOpen, setIsMediaOpen] = useState(false);
 
-  useEffect(() => {
-    checkAuth();
-  }, [pathname]);
-
-  const checkAuth = async () => {
-    try {
-      const response = await fetch('/api/auth/me');
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data);
-      } else {
-        setUser(null);
-      }
-    } catch (error) {
-      console.error('Auth check error:', error);
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
+  const isActive = (path: string) => {
+    return pathname === path;
   };
 
   const handleLogout = async () => {
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        setUser(null);
-        router.push('/login');
-        router.refresh();
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await logout();
   };
-
-  const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (pathname === '/') {
-      e.preventDefault();
-      router.refresh();
-    }
-  };
-
-  if (isLoading) {
-    return <nav className="bg-white shadow-lg">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="flex justify-between h-16">
-          <Link href="/" className="flex items-center py-4 px-2">
-            ControlRoom
-          </Link>
-        </div>
-      </div>
-    </nav>;
-  }
 
   return (
-    <nav className="bg-white shadow-lg">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          {/* Left section */}
-          <Link 
-            href="/" 
-            className="text-black flex items-center rounded-md hover:bg-blue-100 py-4 px-2"
-            onClick={handleHomeClick}
-          >
-            ControlRoom
-          </Link>
+    <nav className="bg-white shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          <div className="flex">
+            <div className="flex-shrink-0 flex items-center">
+              <Link href="/" className="text-xl font-bold text-gray-800">
+                Control Room
+              </Link>
+            </div>
+            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+              <Link
+                href="/"
+                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  isActive('/') 
+                    ? 'border-blue-500 text-gray-900'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                Home
+              </Link>
 
-          {/* Center section */}
-          <div className="flex space-x-4">
-            {user && (
-              <>
-                <Link
-                  href="/diary"
-                  className="text-gray-500 flex items-center rounded-md hover:bg-gray-100 hover:text-black py-4 px-2"
-                >
-                  Diary
-                </Link>
-                <Link
-                  href="/finance"
-                  className="text-gray-500 flex items-center rounded-md hover:bg-gray-100 hover:text-black py-4 px-2"
-                >
-                  Finance
-                </Link>
-                <Link
-                  href="/notes"
-                  className="text-gray-500 flex items-center rounded-md hover:bg-gray-100 hover:text-black py-4 px-2"
-                >
-                  Notes
-                </Link>
-                <div className="relative group">
-                  <button
-                    className="text-gray-500 flex items-center rounded-md hover:bg-gray-100 hover:text-black py-4 px-2"
+              {isAuthenticated && (
+                <>
+                  <Link
+                    href="/diary"
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                      isActive('/diary')
+                        ? 'border-blue-500 text-gray-900'
+                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    }`}
                   >
-                  Media <span className="ml-1 text-xs">▼</span>
-                  </button>
-                  <div 
-                    className="absolute hidden group-hover:block top-full left-0 bg-white shadow-lg rounded-md py-2 w-48 z-10"
+                    Diary
+                  </Link>
+
+                  <Link
+                    href="/finance"
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                      isActive('/finance')
+                        ? 'border-blue-500 text-gray-900'
+                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    }`}
                   >
-                    <Link
-                      href="/media/movie"
-                      className="block px-4 py-2 text-gray-500 hover:bg-gray-100 hover:text-black"
-                    >
-                      Movies Collection
-                    </Link>
-                    <Link
-                      href="/media/tv"
-                      className="block px-4 py-2 text-gray-500 hover:bg-gray-100 hover:text-black"
-                    >
-                      TV Shows Collection
-                    </Link>
-                  </div>
-                </div>
-              </>
-            )}
+                    Finance
+                  </Link>
+
+                  <Link
+                    href="/notes"
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                      isActive('/notes')
+                        ? 'border-blue-500 text-gray-900'
+                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    }`}
+                  >
+                    Notes
+                  </Link>
+
+                  <Link
+                    href="/media/movie"
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                      isActive('/media/movie')
+                        ? 'border-blue-500 text-gray-900'
+                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    }`}
+                  >
+                    Movies
+                  </Link>
+
+                  <Link
+                    href="/media/tv"
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                      isActive('/media/tv')
+                        ? 'border-blue-500 text-gray-900'
+                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    }`}
+                  >
+                    TV Shows
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
 
-          {/* Right section */}
-          <div className="flex space-x-4">
-            {user ? (
-              <>
-                <Link
-                  href="/profile"
-                  className="text-gray-500 flex items-center rounded-md hover:bg-gray-100 hover:text-black py-4 px-2"
-                >
-                  <span className="mr-2">👤</span>
-                  Profile
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="text-gray-500 flex items-center rounded-md hover:bg-red-100 hover:text-black py-4 px-2"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="text-gray-500 flex items-center rounded-md hover:bg-green-100 hover:text-black py-4 px-2"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/register"
-                  className="text-gray-500 flex items-center rounded-md hover:bg-blue-100 hover:text-black py-4 px-2"
-                >
-                  Register
-                </Link>
-              </>
+          <div className="hidden sm:ml-6 sm:flex sm:items-center">
+            {!isLoading && (
+              <div className="flex space-x-4">
+                {isAuthenticated ? (
+                  <>
+                    <Link
+                      href="/profile"
+                      className={`px-3 py-2 rounded-md text-sm font-medium ${
+                        isActive('/profile')
+                          ? 'bg-gray-100 text-gray-900'
+                          : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                      }`}
+                    >
+                      Profile
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      href="/register"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                    >
+                      Register
+                    </Link>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>

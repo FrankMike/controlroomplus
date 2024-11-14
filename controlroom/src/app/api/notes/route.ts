@@ -1,60 +1,42 @@
-import { NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import { Note } from '@/models/Note';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { connectToDatabase } from "@/lib/mongodb";
+import { Note } from "@/models/Note";
+import { getToken } from "next-auth/jwt";
 
 async function getCurrentUser(request: Request) {
-  try {
-    const cookie = request.headers.get('cookie');
-    
-    if (!cookie) {
-      console.error('No cookie found in request');
-      return null;
-    }
-
-    const response = await fetch('http://localhost:3000/api/auth/me', {
-      headers: {
-        cookie,
-      },
-    });
-    
-    if (!response.ok) {
-      console.error('Auth check failed:', response.status);
-      return null;
-    }
-    
-    const userData = await response.json();
-    
-    if (!userData || !userData._id) {
-      console.error('Invalid user data:', userData);
-      return null;
-    }
-    
-    return userData;
-  } catch (error) {
-    console.error('Error fetching current user:', error);
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
     return null;
   }
+  return session.user;
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    console.log('Current session:', session);
     
-    const user = await getCurrentUser(request);
-    
-    if (!user) {
-      console.log('GET /api/notes - Unauthorized: No user found');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session?.user) {
+      console.log('No session or user found');
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectToDatabase();
-    const notes = await Note.find({ userId: user._id })
+    
+    const notes = await Note.find({ userId: session.user.id })
       .sort({ sessionDate: -1 })
       .lean();
 
+    console.log('Found notes:', notes.length);
     return NextResponse.json(notes);
   } catch (error) {
-    console.error('Failed to fetch notes:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error("Error in notes GET route:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -62,7 +44,7 @@ export async function POST(request: Request) {
   try {
     const user = await getCurrentUser(request);
     
-    if (!user || !user._id) {
+    if (!user || !user.id) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
@@ -78,7 +60,7 @@ export async function POST(request: Request) {
     await connectToDatabase();
 
     const newNote = await Note.create({
-      userId: user._id.toString(),
+      userId: user.id,
       sessionDate: new Date(noteData.sessionDate),
       content: noteData.content,
     });
@@ -104,7 +86,7 @@ export async function PUT(request: Request) {
     await connectToDatabase();
 
     const updatedNote = await Note.findOneAndUpdate(
-      { _id: note._id, userId: user._id },
+      { _id: note._id, userId: user.id },
       { ...note, updatedAt: new Date() },
       { new: true }
     );
@@ -131,7 +113,7 @@ export async function DELETE(request: Request) {
     const id = searchParams.get('id');
     
     await connectToDatabase();
-    const result = await Note.deleteOne({ _id: id, userId: user._id });
+    const result = await Note.deleteOne({ _id: id, userId: user.id });
 
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: 'Note not found' }, { status: 404 });

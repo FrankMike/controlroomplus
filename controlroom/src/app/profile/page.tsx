@@ -1,248 +1,177 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
-
-interface UserData {
-  username: string;
-  name?: string;
-  surname?: string;
-  birthday?: string;
-}
-
-interface PasswordData {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
 
 export default function ProfilePage() {
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [passwordData, setPasswordData] = useState<PasswordData>({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [message, setMessage] = useState('');
+  const { user, logout } = useAuth();
   const router = useRouter();
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(user?.name || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchUserData();
-  }, []);
-
-  const fetchUserData = async () => {
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      const response = await fetch('/api/auth/me');
-      if (!response.ok) {
-        router.push('/login');
-        return;
-      }
-      const data = await response.json();
-      setUserData(data);
+      const res = await fetch('/api/auth/update-profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name }),
+      });
+
+      if (!res.ok) throw new Error('Failed to update profile');
+      
+      setMessage('Profile updated successfully');
+      setIsEditing(false);
     } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setIsLoading(false);
+      setError('Failed to update profile');
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/auth/me', {
+      const res = await fetch('/api/auth/change-password', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-      });
-      
-      const result = await response.json();
-      
-      if (response.ok) {
-        setMessage('Profile updated successfully!');
-        fetchUserData();
-      } else {
-        setMessage(`Failed to update profile: ${result.error || 'Unknown error'}`);
-      }
-    } catch (error) {
-      setMessage('An error occurred while updating the profile');
-    }
-  };
-
-  const handlePasswordChange = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setMessage('New passwords do not match');
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/auth/password', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword,
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        setMessage('Password updated successfully!');
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: '',
-        });
-      } else {
-        setMessage(result.error || 'Failed to update password');
-      }
+      if (!res.ok) throw new Error('Failed to change password');
+      
+      setMessage('Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
     } catch (error) {
-      setMessage('An error occurred while updating the password');
+      setError('Failed to change password');
     }
   };
 
   const handleDeleteAccount = async () => {
-    const confirmed = window.confirm(
-      'Are you sure you want to delete your account? This action cannot be undone.'
-    );
+    if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+      try {
+        const res = await fetch('/api/auth/delete-account', {
+          method: 'DELETE',
+        });
 
-    if (!confirmed) return;
-
-    try {
-      const response = await fetch('/api/auth/me', {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
+        if (!res.ok) throw new Error('Failed to delete account');
+        
+        await logout();
         router.push('/login');
-        router.refresh();
-      } else {
-        const data = await response.json();
-        setMessage(data.error || 'Failed to delete account');
+      } catch (error) {
+        setError('Failed to delete account');
       }
-    } catch (error) {
-      setMessage('An error occurred while deleting your account');
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-6">Profile Settings</h1>
-      {message && (
-        <div className="mb-4 p-2 bg-blue-100 text-blue-700 rounded">
-          {message}
-        </div>
-      )}
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md mx-auto bg-white rounded-lg shadow p-8">
+        <h2 className="text-2xl font-bold mb-6">Profile Settings</h2>
+        
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+        
+        {message && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+            {message}
+          </div>
+        )}
 
-      {/* Profile Information Form */}
-      <form onSubmit={handleSubmit} className="space-y-4 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Personal Information</h2>
-        <div>
-          <label className="block text-sm font-medium mb-1">Username</label>
-          <input
-            type="text"
-            value={userData?.username || ''}
-            disabled
-            className="w-full p-2 border rounded bg-gray-50"
-          />
+        <div className="mb-8">
+          <h3 className="text-lg font-medium mb-4">Profile Information</h3>
+          <p className="mb-2"><strong>Username:</strong> {user?.username}</p>
+          
+          {isEditing ? (
+            <form onSubmit={handleUpdateProfile}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  type="submit"
+                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div>
+              <p className="mb-2"><strong>Name:</strong> {user?.name}</p>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="text-blue-500 hover:text-blue-600"
+              >
+                Edit Profile
+              </button>
+            </div>
+          )}
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Name</label>
-          <input
-            type="text"
-            value={userData?.name || ''}
-            onChange={(e) => setUserData({ ...userData!, name: e.target.value })}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Surname</label>
-          <input
-            type="text"
-            value={userData?.surname || ''}
-            onChange={(e) => setUserData({ ...userData!, surname: e.target.value })}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Birthday</label>
-          <input
-            type="date"
-            value={userData?.birthday?.split('T')[0] || ''}
-            onChange={(e) => setUserData({ ...userData!, birthday: e.target.value })}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-        >
-          Save Changes
-        </button>
-      </form>
 
-      {/* Password Change Form */}
-      <form onSubmit={handlePasswordChange} className="space-y-4 mb-8 pt-6 border-t">
-        <h2 className="text-xl font-semibold mb-4">Change Password</h2>
-        <div>
-          <label className="block text-sm font-medium mb-1">Current Password</label>
-          <input
-            type="password"
-            value={passwordData.currentPassword}
-            onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-            className="w-full p-2 border rounded"
-          />
+        <div className="mb-8">
+          <h3 className="text-lg font-medium mb-4">Change Password</h3>
+          <form onSubmit={handleChangePassword}>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">Current Password</label>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">New Password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <button
+              type="submit"
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              Change Password
+            </button>
+          </form>
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">New Password</label>
-          <input
-            type="password"
-            value={passwordData.newPassword}
-            onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Confirm New Password</label>
-          <input
-            type="password"
-            value={passwordData.confirmPassword}
-            onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-        <button
-          type="submit"
-          className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600"
-        >
-          Update Password
-        </button>
-      </form>
 
-      {/* Delete Account Section */}
-      <div className="mt-8 pt-6 border-t">
-        <h2 className="text-xl font-semibold text-red-600 mb-4">Danger Zone</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Once you delete your account, there is no going back. Please be certain.
-        </p>
-        <button
-          onClick={handleDeleteAccount}
-          className="w-full bg-red-500 text-white p-2 rounded hover:bg-red-600"
-        >
-          Delete Account
-        </button>
+        <div className="border-t pt-6">
+          <h3 className="text-lg font-medium text-red-600 mb-4">Danger Zone</h3>
+          <button
+            onClick={handleDeleteAccount}
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+          >
+            Delete Account
+          </button>
+        </div>
       </div>
     </div>
   );

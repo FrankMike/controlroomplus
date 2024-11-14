@@ -95,7 +95,7 @@ const decodeHtmlEntities = (text: string): string => {
 
 export default function TvPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [shows, setShows] = useState<TvShow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -107,21 +107,21 @@ export default function TvPage() {
   const { totalShows, totalEpisodes, totalSize, isLoading: statsLoading } = useTvShowStats();
 
   const fetchShows = async () => {
+    if (!isAuthenticated) return;
+    
     setIsLoading(true);
     try {
       const response = await fetch('/api/tvshows');
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      console.log('Fetched TV shows:', data);
       setShows(data);
     } catch (error) {
       console.error('Error fetching TV shows:', error);
       toast({
         title: 'Error',
-        description: `Failed to fetch TV shows: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: 'Unable to fetch TV shows. Please try again later.',
         variant: 'destructive',
       });
     } finally {
@@ -156,13 +156,26 @@ export default function TvPage() {
   };
 
   useEffect(() => {
+    if (authLoading) return;
+    
     if (!isAuthenticated) {
       router.push('/login');
       return;
     }
     
     fetchShows();
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, authLoading, router]);
+
+  if (authLoading || !isAuthenticated) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="border rounded-lg overflow-hidden bg-white shadow-sm p-8">
+          <LoadingSpinner />
+          <p className="text-center text-gray-500 mt-4">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const toggleShowExpansion = (plexId: string) => {
     const newExpanded = new Set(expandedShows);
@@ -175,12 +188,15 @@ export default function TvPage() {
   };
 
   const getFilteredShows = () => {
+    if (!shows || !Array.isArray(shows)) return [];
+    
     return shows
       .filter(show => 
         show.title.toLowerCase().includes(searchQuery.toLowerCase())
       )
       .sort((a, b) => {
         const direction = sortDirection === 'asc' ? 1 : -1;
+        if (a[sortField] === undefined || b[sortField] === undefined) return 0;
         return a[sortField] > b[sortField] ? direction : -direction;
       });
   };

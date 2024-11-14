@@ -4,7 +4,6 @@ const NoteSchema = new mongoose.Schema({
   userId: {
     type: String,
     required: true,
-    index: true,
   },
   sessionDate: {
     type: Date,

@@ -1,45 +1,51 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface MovieStats {
-  totalCount: number;
-  totalSize: string;
-  isLoading: boolean;
-}
-
-export function useMovieStats(): MovieStats {
-  const [stats, setStats] = useState<MovieStats>({
+export function useMovieStats() {
+  const [stats, setStats] = useState({
     totalCount: 0,
     totalSize: '0 GB',
-    isLoading: true,
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
     const fetchStats = async () => {
+      if (authLoading || !isAuthenticated) return;
+
       try {
         const response = await fetch('/api/movies');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const movies = await response.json();
         
-        const totalCount = movies.length;
-        const totalBytes = movies.reduce((acc: number, movie: any) => acc + (movie.fileSize || 0), 0);
-        const totalTerabytes = totalBytes / (1024 * 1024 * 1024 * 1024);
-        
-        const totalSize = totalTerabytes >= 1
-          ? `${totalTerabytes.toFixed(2)} TB`
-          : `${(totalBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+        if (!Array.isArray(movies)) {
+          throw new Error('Invalid data format');
+        }
 
-        setStats({
-          totalCount,
-          totalSize,
-          isLoading: false,
-        });
+        const totalCount = movies.length;
+        const totalBytes = movies.reduce((acc, movie) => acc + (movie.fileSize || 0), 0);
+        const totalSize = formatFileSize(totalBytes);
+
+        setStats({ totalCount, totalSize });
       } catch (error) {
         console.error('Error fetching movie stats:', error);
-        setStats(prev => ({ ...prev, isLoading: false }));
+        setStats({ totalCount: 0, totalSize: '0 GB' });
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchStats();
-  }, []);
+  }, [isAuthenticated, authLoading]);
 
-  return stats;
+  return { ...stats, isLoading };
+}
+
+function formatFileSize(bytes: number): string {
+  if (!bytes) return '0 GB';
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
 } 

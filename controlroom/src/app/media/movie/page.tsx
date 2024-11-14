@@ -41,7 +41,7 @@ type SortDirection = 'asc' | 'desc';
 
 export default function MoviePage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [movies, setMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -95,13 +95,29 @@ export default function MoviePage() {
   };
 
   useEffect(() => {
+    // Don't do anything while auth is loading
+    if (authLoading) return;
+    
+    // Redirect if not authenticated
     if (!isAuthenticated) {
       router.push('/login');
       return;
     }
     
     fetchMovies();
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, authLoading, router]);
+
+  // Early return if auth is loading or not authenticated
+  if (authLoading || !isAuthenticated) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="border rounded-lg overflow-hidden bg-white shadow-sm p-8">
+          <LoadingSpinner />
+          <p className="text-center text-gray-500 mt-4">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -113,11 +129,12 @@ export default function MoviePage() {
   };
 
   const getFilteredMovies = () => {
-    const filtered = movies.filter(movie => 
+    if (!movies || !Array.isArray(movies)) return [];
+    
+    return movies.filter(movie => 
       movie.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (movie.year && movie.year.toString().includes(searchQuery))
     );
-    return getSortedMovies(filtered);
   };
 
   const getSortedMovies = (moviesToSort = movies) => {
@@ -166,11 +183,13 @@ export default function MoviePage() {
   );
 
   const calculateTotalSize = (movies: Movie[]) => {
+    if (!movies || !Array.isArray(movies)) return '0 GB';
+    
     const totalBytes = movies.reduce((acc, movie) => acc + (movie.fileSize || 0), 0);
-    const totalTerabytes = totalBytes / (1024 * 1024 * 1024 * 1024); // Convert to TB
+    const totalTerabytes = totalBytes / (1024 * 1024 * 1024 * 1024);
     
     if (totalTerabytes < 1) {
-      const totalGigabytes = totalBytes / (1024 * 1024 * 1024); // Convert to GB
+      const totalGigabytes = totalBytes / (1024 * 1024 * 1024);
       return `${totalGigabytes.toFixed(2)} GB`;
     }
     

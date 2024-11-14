@@ -21,10 +21,6 @@ export async function POST() {
     const shows = await plexApi.getTvShows();
     console.log(`Retrieved ${shows.length} shows from Plex`);
 
-    if (shows.length > 0) {
-      console.log('Sample show data:', JSON.stringify(shows[0], null, 2));
-    }
-
     let updatedCount = 0;
     for (const show of shows) {
       if (!show) {

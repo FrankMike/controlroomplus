@@ -22,29 +22,34 @@ export default function NotesPage() {
 
   const checkAndFetchNotes = useCallback(async () => {
     setIsLoading(true);
+    setError('');
+    
     if (!user) {
-      console.log('No user found, redirecting to login');
       router.push('/login');
       return;
     }
     
     try {
       const response = await fetch('/api/notes', {
+        method: 'GET',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
       });
       
+      if (response.status === 401) {
+        router.push('/login');
+        return;
+      }
+      
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Failed to fetch notes:', errorData);
         throw new Error(errorData.error || 'Failed to fetch notes');
       }
       
       const data = await response.json();
       setNotes(data);
-      // Expand the most recent note if it exists
       if (data.length > 0) {
         setExpandedNoteId(data[0]._id);
       }

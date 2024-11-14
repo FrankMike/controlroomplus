@@ -1,17 +1,21 @@
 import { NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
 import { connectToDatabase } from '@/lib/mongodb';
 import { User } from '@/models/User';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = 'your-secret-key';
 
 export async function POST(req: Request) {
   try {
-    const { username, password, name, surname, birthday } = await req.json();
-    
+    const { username, password, name } = await req.json();
+
+    if (!username || !password || !name) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
     await connectToDatabase();
 
-    // Check if username already exists
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return NextResponse.json(
@@ -20,43 +24,22 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create new user
-    const user = new User({
+    const hashedPassword = await bcrypt.hash(password, 12);
+    
+    await User.create({
       username,
-      password,
+      password: hashedPassword,
       name,
-      surname,
-      birthday: new Date(birthday),
     });
 
-    await user.save();
-
-    // Create token
-    const token = jwt.sign(
-      { userId: user._id },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    // Create response
-    const response = NextResponse.json(
+    return NextResponse.json(
       { message: 'User created successfully' },
       { status: 201 }
     );
-
-    // Set cookie
-    response.cookies.set('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 86400 // 24 hours
-    });
-
-    return response;
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json(
-      { error: 'Registration failed' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

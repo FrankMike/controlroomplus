@@ -22,11 +22,6 @@ export async function GET() {
     const shows = await TvShow.find().sort({ title: 1 });
     console.log('API: Found shows:', shows.length);
     
-    // Log a sample show if available
-    if (shows.length > 0) {
-      console.log('Sample show:', JSON.stringify(shows[0], null, 2));
-    }
-    
     return NextResponse.json(shows);
   } catch (error) {
     console.error('Error fetching TV shows:', error);

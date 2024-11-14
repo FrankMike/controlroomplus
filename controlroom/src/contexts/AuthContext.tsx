@@ -1,79 +1,101 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useState } from 'react';
+import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: any | null;
-  login: () => Promise<void>;
-  logout: () => void;
+  user: any;
+  login: (username: string, password: string) => Promise<void>;
+  register: (username: string, password: string, name: string) => Promise<void>;
+  logout: () => Promise<void>;
+  isLoading: boolean;
+  error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   user: null,
   login: async () => {},
-  logout: () => {},
+  register: async () => {},
+  logout: async () => {},
+  isLoading: true,
+  error: null,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: session, status } = useSession();
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
 
-  const checkAuthStatus = async () => {
+  const login = async (username: string, password: string) => {
     try {
-      const response = await fetch('/api/auth/me', {
-        credentials: 'include'
+      const result = await signIn('credentials', {
+        redirect: false,
+        username,
+        password,
       });
-      
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-        setIsAuthenticated(true);
-      } else {
-        setUser(null);
-        setIsAuthenticated(false);
+
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
+
+      if (result?.ok) {
+        router.push('/');
+        router.refresh();
       }
     } catch (error) {
-      console.error('Auth check error:', error);
-      setUser(null);
-      setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
+      setError('An error occurred during login');
     }
   };
 
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
+  const register = async (username: string, password: string, name: string) => {
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password, name }),
+      });
 
-  const login = async () => {
-    await checkAuthStatus();
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || 'Registration failed');
+        return;
+      }
+
+      // After successful registration, log the user in
+      await login(username, password);
+    } catch (error) {
+      setError('An error occurred during registration');
+    }
   };
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-      setUser(null);
-      setIsAuthenticated(false);
+      await signOut({ redirect: false });
       router.push('/login');
+      router.refresh();
     } catch (error) {
-      console.error('Logout error:', error);
+      setError('An error occurred during logout');
     }
   };
 
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
+  const value = {
+    user: session?.user || null,
+    isAuthenticated: !!session?.user,
+    isLoading: status === 'loading',
+    login,
+    register,
+    logout,
+    error,
+  };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
