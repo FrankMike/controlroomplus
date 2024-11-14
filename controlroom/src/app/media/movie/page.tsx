@@ -137,19 +137,19 @@ export default function MoviePage() {
     );
   };
 
-  const getSortedMovies = (moviesToSort = movies) => {
+  const getSortedMovies = (moviesToSort: Movie[]) => {
     return [...moviesToSort].sort((a, b) => {
       const direction = sortDirection === 'asc' ? 1 : -1;
       
       switch (sortField) {
         case 'title':
-          return direction * a.title.localeCompare(b.title);
+          return direction * (a.title || '').localeCompare(b.title || '');
         case 'year':
           return direction * ((a.year || 0) - (b.year || 0));
         case 'duration':
-          return direction * (a.duration - b.duration);
+          return direction * ((a.duration || 0) - (b.duration || 0));
         case 'fileSize':
-          return direction * (a.fileSize - b.fileSize);
+          return direction * ((a.fileSize || 0) - (b.fileSize || 0));
         case 'resolution': {
           const resOrder = { '4K': 4, '1080p': 3, '720p': 2, 'SD': 1, 'Unknown': 0 };
           const aVal = resOrder[a.resolution as keyof typeof resOrder] || 0;
@@ -157,7 +157,7 @@ export default function MoviePage() {
           return direction * (aVal - bVal);
         }
         case 'videoCodec':
-          return direction * a.videoCodec.localeCompare(b.videoCodec);
+          return direction * (a.videoCodec || '').localeCompare(b.videoCodec || '');
         default:
           return 0;
       }
@@ -282,7 +282,7 @@ export default function MoviePage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {getFilteredMovies().map((movie) => (
+              {getSortedMovies(getFilteredMovies()).map((movie) => (
                 <TableRow 
                   key={movie.plexId}
                   className="hover:bg-gray-50 transition-colors"
