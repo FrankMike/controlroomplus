@@ -15,14 +15,13 @@ export async function GET() {
       );
     }
 
-    console.log('Connecting to database...');
     await connectToDatabase();
-    
-    console.log('Fetching TV shows from database...');
     const shows = await TvShow.find().sort({ title: 1 });
-    console.log('API: Found shows:', shows.length);
     
-    return NextResponse.json(shows);
+    const response = NextResponse.json(shows);
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    
+    return response;
   } catch (error) {
     console.error('Error fetching TV shows:', error);
     return NextResponse.json(

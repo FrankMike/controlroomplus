@@ -16,6 +16,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { ChevronUp, ChevronDown, Search, ChevronRight, ChevronDown as ExpandIcon } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useTvShowStats } from '@/hooks/useTvShowStats';
+import useSWR from 'swr';
 
 interface Episode {
   title: string;
@@ -96,8 +97,6 @@ const decodeHtmlEntities = (text: string): string => {
 export default function TvPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const [shows, setShows] = useState<TvShow[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
   const [sortField, setSortField] = useState<SortField>('title');
@@ -106,28 +105,16 @@ export default function TvPage() {
   const [expandedShows, setExpandedShows] = useState<Set<string>>(new Set());
   const { totalShows, totalEpisodes, totalSize, isLoading: statsLoading } = useTvShowStats();
 
-  const fetchShows = async () => {
-    if (!isAuthenticated) return;
-    
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/tvshows');
+  const { data: shows = [], isLoading: showsLoading, mutate: refreshShows } = useSWR(
+    isAuthenticated ? '/api/tvshows' : null,
+    async (url) => {
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = await response.json();
-      setShows(data);
-    } catch (error) {
-      console.error('Error fetching TV shows:', error);
-      toast({
-        title: 'Error',
-        description: 'Unable to fetch TV shows. Please try again later.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+      return response.json();
     }
-  };
+  );
 
   const syncShows = async () => {
     setIsSyncing(true);
@@ -139,7 +126,7 @@ export default function TvPage() {
           title: 'Success',
           description: data.message || 'TV shows synced successfully',
         });
-        await fetchShows();
+        await refreshShows();
       } else {
         throw new Error(data.message || 'Sync failed');
       }
@@ -154,17 +141,6 @@ export default function TvPage() {
       setIsSyncing(false);
     }
   };
-
-  useEffect(() => {
-    if (authLoading) return;
-    
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
-    
-    fetchShows();
-  }, [isAuthenticated, authLoading, router]);
 
   if (authLoading || !isAuthenticated) {
     return (
@@ -204,7 +180,7 @@ export default function TvPage() {
   const filteredShows = getFilteredShows();
   console.log('Filtered shows:', filteredShows);
 
-  if (isLoading) {
+  if (showsLoading) {
     return (
       <div className="container mx-auto py-8">
         <div className="border rounded-lg overflow-hidden bg-white shadow-sm p-8">
@@ -248,7 +224,7 @@ export default function TvPage() {
         </div>
       </div>
 
-      {!isLoading && shows.length === 0 && (
+      {!showsLoading && shows.length === 0 && (
         <div className="text-center py-8 text-gray-500">
           No TV shows found. Try syncing with Plex using the button above.
         </div>
@@ -337,7 +313,7 @@ export default function TvPage() {
                     <TableCell className="text-center">{show.episodeCount}</TableCell>
                     <TableCell className="text-center">{formatFileSize(show.totalFileSize)}</TableCell>
                   </TableRow>
-                  {expandedShows.has(show.plexId) && show.seasons.map((season) => (
+                  {expandedShows.has(show.plexId) && show.seasons.map((season: Season) => (
                     <TableRow key={`${show.plexId}-${season.plexId}`} className="bg-gray-50">
                       <TableCell colSpan={6}>
                         <div className="pl-4 py-2">

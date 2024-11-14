@@ -50,7 +50,7 @@ export default function Navbar() {
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                     }`}
                   >
-                    Diary
+                    📔 Diary
                   </Link>
 
                   <Link
@@ -61,7 +61,7 @@ export default function Navbar() {
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                     }`}
                   >
-                    Finance
+                    💰 Finance
                   </Link>
 
                   <Link
@@ -72,7 +72,7 @@ export default function Navbar() {
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                     }`}
                   >
-                    Notes
+                    📝 Notes
                   </Link>
 
                   <Link
@@ -83,7 +83,7 @@ export default function Navbar() {
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                     }`}
                   >
-                    Movies
+                    🎥 Movies
                   </Link>
 
                   <Link
@@ -94,7 +94,7 @@ export default function Navbar() {
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                     }`}
                   >
-                    TV Shows
+                    📺 TV Shows
                   </Link>
                 </>
               )}
