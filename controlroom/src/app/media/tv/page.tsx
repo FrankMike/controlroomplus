@@ -119,22 +119,30 @@ export default function TvPage() {
   const syncShows = async () => {
     setIsSyncing(true);
     try {
-      const response = await fetch('/api/tvshows/sync', { method: 'POST' });
+      const response = await fetch('/api/tvshows/sync', { 
+        method: 'POST',
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Unauthorized');
+      }
+      
       const data = await response.json();
       if (data.success) {
         toast({
           title: 'Success',
-          description: data.message || 'TV shows synced successfully',
+          description: 'TV shows synced successfully',
         });
-        await refreshShows();
+        refreshShows();
       } else {
-        throw new Error(data.message || 'Sync failed');
+        throw new Error(data.message);
       }
     } catch (error) {
       console.error('Sync error:', error);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to sync TV shows',
+        description: 'Failed to sync TV shows',
         variant: 'destructive',
       });
     } finally {

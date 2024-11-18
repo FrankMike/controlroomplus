@@ -1,29 +1,25 @@
 import { connectToDatabase } from '@/lib/mongodb';
 import { Diary } from '@/models/Diary';
 import { NextResponse } from 'next/server';
-import { verify } from 'jsonwebtoken';
-import { cookies } from 'next/headers';
-
-const JWT_SECRET = 'your-secret-key';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 // Get diary entries with search and filter
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search');
-    const category = searchParams.get('category');
+    const session = await getServerSession(authOptions);
     
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token');
-
-    if (!token) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const decoded = verify(token.value, JWT_SECRET) as { userId: string };
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search');
+    const category = searchParams.get('category');
+
     await connectToDatabase();
 
-    let query: any = { userId: decoded.userId };
+    let query: any = { userId: session.user.id };
 
     // Add search conditions
     if (search) {
@@ -42,6 +38,7 @@ export async function GET(request: Request) {
     const entries = await Diary.find(query).sort({ createdAt: -1 });
     return NextResponse.json(entries);
   } catch (error) {
+    console.error('Error in diary GET:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -49,20 +46,18 @@ export async function GET(request: Request) {
 // Create new entry
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token');
-
-    if (!token) {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const decoded = verify(token.value, JWT_SECRET) as { userId: string };
     const { title, content, category, tags } = await request.json();
 
     await connectToDatabase();
 
     const newEntry = new Diary({
-      userId: decoded.userId,
+      userId: session.user.id,
       title,
       content,
       category,
@@ -72,6 +67,7 @@ export async function POST(request: Request) {
     await newEntry.save();
     return NextResponse.json(newEntry, { status: 201 });
   } catch (error) {
+    console.error('Error in diary POST:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

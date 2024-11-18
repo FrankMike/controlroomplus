@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { connectToDatabase } from './mongodb';
 import bcrypt from 'bcryptjs';
 import { User } from '@/models/User';
+import { JWT } from 'next-auth/jwt';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -50,6 +51,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.username = user.username ?? undefined;
         token.email = user.email ?? undefined;
+        token.accessToken = `jwt_${user.id}_${Date.now()}`;
       }
       return token;
     },
@@ -58,6 +60,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.username = token.username as string;
         session.user.email = token.email as string;
+        (session as any).accessToken = token.accessToken;
       }
       return session;
     }

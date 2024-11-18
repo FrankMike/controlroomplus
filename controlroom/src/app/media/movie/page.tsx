@@ -72,21 +72,34 @@ export default function MoviePage() {
   const syncMovies = async () => {
     setIsSyncing(true);
     try {
-      const response = await fetch('/api/movies/sync', { method: 'POST' });
+      const response = await fetch('/api/movies/sync', { 
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
       const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to sync movies');
+      }
+      
       if (data.success) {
         toast({
           title: 'Success',
           description: 'Movies synced successfully',
         });
-        fetchMovies();
+        await fetchMovies();
       } else {
-        throw new Error(data.message);
+        throw new Error(data.message || 'Failed to sync movies');
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Sync error:', error.message);
       toast({
         title: 'Error',
-        description: 'Failed to sync movies',
+        description: error.message || 'Failed to sync movies',
         variant: 'destructive',
       });
     } finally {

@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, ReactNode, useState } from 'react';
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signIn, signOut, getSession } from "next-auth/react";
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
@@ -12,6 +12,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isLoading: boolean;
   error: string | null;
+  getToken: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   logout: async () => {},
   isLoading: true,
   error: null,
+  getToken: async () => null,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -84,6 +86,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const getToken = async () => {
+    try {
+      const session = await getSession();
+      return (session as any)?.accessToken || null;
+    } catch (error) {
+      console.error('Error getting token:', error);
+      return null;
+    }
+  };
+
   const value = {
     user: session?.user || null,
     isAuthenticated: !!session?.user,
@@ -92,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
     logout,
     error,
+    getToken,
   };
 
   return (
