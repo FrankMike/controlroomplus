@@ -17,46 +17,36 @@ export async function POST() {
     }
 
     await connectToDatabase();
-    
-    let movies;
-    try {
-      movies = await plexApi.getMovies();
-    } catch (error) {
-      console.error('Error fetching from Plex:', error);
-      return NextResponse.json(
-        { success: false, message: 'Failed to fetch movies from Plex' },
-        { status: 500 }
-      );
-    }
+    const plexMovies = await plexApi.getMovies();
 
-    if (!movies || !Array.isArray(movies)) {
+    if (!plexMovies || !Array.isArray(plexMovies)) {
       return NextResponse.json(
         { success: false, message: 'Invalid response from Plex API' },
         { status: 500 }
       );
     }
 
-    // Update or insert movies
-    try {
-      for (const movie of movies) {
-        await Movie.findOneAndUpdate(
-          { plexId: movie.plexId },
-          movie,
-          { upsert: true, new: true }
-        );
-      }
-    } catch (error) {
-      console.error('Error updating database:', error);
-      return NextResponse.json(
-        { success: false, message: 'Failed to update movie database' },
-        { status: 500 }
+    // Get all plexIds from the current Plex library
+    const currentPlexIds = new Set(plexMovies.map(movie => movie.plexId));
+
+    // Delete movies that are no longer in Plex
+    await Movie.deleteMany({
+      plexId: { $nin: Array.from(currentPlexIds) }
+    });
+
+    // Update or insert current movies
+    for (const movie of plexMovies) {
+      await Movie.findOneAndUpdate(
+        { plexId: movie.plexId },
+        movie,
+        { upsert: true, new: true }
       );
     }
 
     return NextResponse.json({ 
       success: true, 
       message: 'Movies synced successfully',
-      count: movies.length
+      count: plexMovies.length
     });
   } catch (error) {
     console.error('Error in movie sync:', error);

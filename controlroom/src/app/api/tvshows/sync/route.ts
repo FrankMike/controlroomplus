@@ -17,10 +17,18 @@ export async function POST() {
     }
 
     await connectToDatabase();
-    const shows = await plexApi.getTvShows();
+    const plexShows = await plexApi.getTvShows();
 
-    // Update or insert shows
-    for (const show of shows) {
+    // Get all plexIds from the current Plex library
+    const currentPlexIds = new Set(plexShows.map(show => show.plexId));
+
+    // Delete shows that are no longer in Plex
+    await TvShow.deleteMany({
+      plexId: { $nin: Array.from(currentPlexIds) }
+    });
+
+    // Update or insert current shows
+    for (const show of plexShows) {
       await TvShow.findOneAndUpdate(
         { plexId: show.plexId },
         show,
