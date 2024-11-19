@@ -102,34 +102,6 @@ export default function RegisterPage() {
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            <div>
-              <label htmlFor="surname" className="block text-sm font-medium text-gray-700">
-                Surname *
-              </label>
-              <input
-                id="surname"
-                name="surname"
-                type="text"
-                required
-                value={formData.surname}
-                onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label htmlFor="birthday" className="block text-sm font-medium text-gray-700">
-                Birthday *
-              </label>
-              <input
-                id="birthday"
-                name="birthday"
-                type="date"
-                required
-                value={formData.birthday}
-                onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
           </div>
 
           <div>
