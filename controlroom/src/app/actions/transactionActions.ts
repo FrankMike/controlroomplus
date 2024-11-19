@@ -36,6 +36,7 @@ export async function addTransaction(transaction: Partial<ITransaction>): Promis
     const newTransaction = new Transaction({
       ...transaction,
       userId: session.user.id,
+      date: new Date(transaction.date!),
     });
     await newTransaction.save();
     return JSON.parse(JSON.stringify(newTransaction));
@@ -53,9 +54,15 @@ export async function updateTransaction(id: string, transaction: Partial<ITransa
     }
 
     await connectToDatabase();
+    
+    const updateData = {
+      ...transaction,
+      date: transaction.date ? new Date(transaction.date) : undefined,
+    };
+
     const updatedTransaction = await Transaction.findOneAndUpdate(
       { _id: id, userId: session.user.id },
-      transaction,
+      updateData,
       { new: true }
     );
     

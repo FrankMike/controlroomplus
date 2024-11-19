@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSession } from 'next-auth/react';
 import {
   Table,
   TableBody,
@@ -41,7 +41,7 @@ type SortDirection = 'asc' | 'desc';
 
 export default function MoviePage() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { data: _session, status } = useSession();
   const [movies, setMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -108,28 +108,29 @@ export default function MoviePage() {
   };
 
   useEffect(() => {
-    // Don't do anything while auth is loading
-    if (authLoading) return;
-    
-    // Redirect if not authenticated
-    if (!isAuthenticated) {
+    if (status === 'unauthenticated') {
       router.push('/login');
-      return;
     }
-    
-    fetchMovies();
-  }, [isAuthenticated, authLoading, router]);
+  }, [status, router]);
 
-  // Early return if auth is loading or not authenticated
-  if (authLoading || !isAuthenticated) {
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchMovies();
+    }
+  }, [status]);
+
+  // Show loading state
+  if (status === 'loading') {
     return (
-      <div className="container mx-auto py-8">
-        <div className="border rounded-lg overflow-hidden bg-white shadow-sm p-8">
-          <LoadingSpinner />
-          <p className="text-center text-gray-500 mt-4">Loading...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading...</div>
       </div>
     );
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (status === 'unauthenticated') {
+    return null;
   }
 
   const handleSort = (field: SortField) => {
@@ -218,10 +219,6 @@ export default function MoviePage() {
         </div>
       </div>
     );
-  }
-
-  if (!user) {
-    return null; // Router will handle redirect
   }
 
   const formatFileSize = (bytes: number) => {

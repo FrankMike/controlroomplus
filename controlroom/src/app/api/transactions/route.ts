@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import Transaction from '@/models/Transaction';
 import { connectToDatabase } from '@/lib/mongodb';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession();
     if (!session?.user) {

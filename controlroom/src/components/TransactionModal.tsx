@@ -36,10 +36,10 @@ export default function TransactionModal({
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const data = {
-      amount: formData.get('amount'),
-      description: formData.get('description'),
-      type: formData.get('type'),
-      date: formData.get('date'),
+      amount: Number(formData.get('amount')),
+      description: formData.get('description') as string,
+      type: formData.get('type') as TransactionType,
+      date: new Date(formData.get('date') as string),
       isRecurring: false,
       recurrenceInterval: RecurrenceInterval.NONE,
     };

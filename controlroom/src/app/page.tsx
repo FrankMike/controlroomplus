@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+//import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useMovieStats } from '@/hooks/useMovieStats';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';

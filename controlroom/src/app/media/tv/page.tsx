@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSession } from 'next-auth/react';
 import {
   Table,
   TableBody,
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { ChevronUp, ChevronDown, Search, ChevronRight, ChevronDown as ExpandIcon } from 'lucide-react';
+import { ChevronUp, ChevronDown, Search, ChevronRight } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useTvShowStats } from '@/hooks/useTvShowStats';
 import useSWR from 'swr';
@@ -96,18 +96,18 @@ const decodeHtmlEntities = (text: string): string => {
 
 export default function TvPage() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { data: _session, status } = useSession();
   const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
   const [sortField, setSortField] = useState<SortField>('title');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedShows, setExpandedShows] = useState<Set<string>>(new Set());
-  const { totalShows, totalEpisodes, totalSize, isLoading: statsLoading } = useTvShowStats();
+  const { totalEpisodes, totalSize } = useTvShowStats();
 
-  const { data: shows = [], isLoading: showsLoading, mutate: refreshShows } = useSWR(
-    isAuthenticated ? '/api/tvshows' : null,
-    async (url) => {
+  const { data: shows = [], isLoading: showsLoading, mutate: refreshShows } = useSWR<TvShow[]>(
+    status === 'authenticated' ? '/api/tvshows' : null,
+    async (url: string) => {
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -150,15 +150,24 @@ export default function TvPage() {
     }
   };
 
-  if (authLoading || !isAuthenticated) {
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  // Show loading state
+  if (status === 'loading') {
     return (
-      <div className="container mx-auto py-8">
-        <div className="border rounded-lg overflow-hidden bg-white shadow-sm p-8">
-          <LoadingSpinner />
-          <p className="text-center text-gray-500 mt-4">Loading...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading...</div>
       </div>
     );
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (status === 'unauthenticated') {
+    return null;
   }
 
   const toggleShowExpansion = (plexId: string) => {

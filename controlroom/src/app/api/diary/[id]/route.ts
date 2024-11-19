@@ -1,27 +1,39 @@
 import { connectToDatabase } from '@/lib/mongodb';
 import { Diary } from '@/models/Diary';
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
-// Update entry
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    // Await the params promise
+    const params = await context.params;
+    const { id } = params;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+    }
     
+    const session = await getServerSession(authOptions);
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
     const { title, content, category, tags } = await request.json();
 
+    // Input validation
+    if (!title || !content) {
+      return NextResponse.json({ error: 'Title and content are required' }, { status: 400 });
+    }
+
     await connectToDatabase();
 
     const entry = await Diary.findOne({
-      _id: params.id,
+      _id: id,
       userId: session.user.id
     });
 
@@ -42,14 +54,17 @@ export async function PUT(
   }
 }
 
-// Delete entry
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    // Await the params promise
+    const params = await context.params;
+    const { id } = params;
     
+    const session = await getServerSession(authOptions);
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
@@ -57,7 +72,7 @@ export async function DELETE(
     await connectToDatabase();
 
     const entry = await Diary.findOneAndDelete({
-      _id: params.id,
+      _id: id,
       userId: session.user.id
     });
 
@@ -70,4 +85,5 @@ export async function DELETE(
     console.error('Error in diary DELETE:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-} 
+}
+

@@ -1,24 +1,29 @@
+import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import { NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
-  const token = await getToken({ req: request });
-
-  // Protect these paths
-  const protectedPaths = ['/notes', '/api/notes'];
-  const isProtectedPath = protectedPaths.some(path => 
-    request.nextUrl.pathname.startsWith(path)
-  );
-
-  if (isProtectedPath && !token) {
-    const loginUrl = new URL('/login', request.url);
-    return NextResponse.redirect(loginUrl);
+export default withAuth(
+  function middleware(_req) {
+    return NextResponse.next();
+  },
+  {
+    callbacks: {
+      authorized: ({ token }) => !!token
+    },
+    pages: {
+      signIn: '/login',
+    }
   }
-
-  return NextResponse.next();
-}
+);
 
 export const config = {
-  matcher: ['/notes/:path*', '/api/notes/:path*']
+  matcher: [
+    '/diary/:path*',
+    '/api/diary/:path*',
+    '/finance/:path*',
+    '/api/finance/:path*',
+    '/api/transactions/:path*',
+    '/media/:path*',
+    '/api/movies/:path*',
+    '/api/tvshows/:path*'
+  ]
 }; 

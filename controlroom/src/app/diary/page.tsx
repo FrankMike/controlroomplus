@@ -1,38 +1,34 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-
-interface DiaryEntry {
-  _id: string;
-  title: string;
-  content: string;
-  category: string;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-}
+import { useRouter } from 'next/navigation';
+import DiaryModal from '@/components/DiaryModal';
+import { DiaryEntry } from '@/types/Diary';
+import { useSession } from 'next-auth/react';
 
 const categories = ['general', 'personal', 'work', 'travel', 'health'];
 
 export default function DiaryPage() {
+  const router = useRouter();
+  const { data: _session, status } = useSession();
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
-  const [newEntry, setNewEntry] = useState({
-    title: '',
-    content: '',
-    category: 'general',
-    tags: ''
-  });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [error, setError] = useState('');
-  const [editingEntry, setEditingEntry] = useState<DiaryEntry | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const { user } = useAuth();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<DiaryEntry | undefined>();
 
   useEffect(() => {
-    fetchEntries();
-  }, [searchTerm, selectedCategory]);
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchEntries();
+    }
+  }, [searchTerm, selectedCategory, status]);
 
   const fetchEntries = async () => {
     try {
@@ -49,69 +45,31 @@ export default function DiaryPage() {
     }
   };
 
-  const resetForms = () => {
-    setShowAddForm(false);
-    setEditingEntry(null);
-    setNewEntry({
-      title: '',
-      content: '',
-      category: 'general',
-      tags: ''
-    });
-    setError('');
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (entry: Partial<DiaryEntry>) => {
     try {
-      const entryData = {
-        ...newEntry,
-        tags: newEntry.tags.split(',').map(tag => tag.trim()).filter(Boolean)
-      };
+      const isEditing = !!entry._id;
+      const response = await fetch(
+        isEditing ? `/api/diary/${entry._id}` : '/api/diary',
+        {
+          method: isEditing ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entry),
+        }
+      );
 
-      const response = await fetch('/api/diary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entryData),
-      });
-
-      if (!response.ok) throw new Error('Failed to create entry');
+      if (!response.ok) throw new Error('Failed to save entry');
 
       const savedEntry = await response.json();
-      setEntries([savedEntry, ...entries]);
-      resetForms();
+      
+      if (isEditing) {
+        setEntries(entries.map(e => e._id === savedEntry._id ? savedEntry : e));
+      } else {
+        setEntries([savedEntry, ...entries]);
+      }
+      
+      setError('');
     } catch (err) {
       setError('Failed to save diary entry');
-    }
-  };
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingEntry) return;
-
-    try {
-      const entryData = {
-        ...editingEntry,
-        tags: typeof editingEntry.tags === 'string'
-          ? (editingEntry.tags as string).split(',').map(tag => tag.trim()).filter(Boolean)
-          : editingEntry.tags
-      };
-
-      const response = await fetch(`/api/diary/${editingEntry._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entryData),
-      });
-
-      if (!response.ok) throw new Error('Failed to update entry');
-
-      const updatedEntry = await response.json();
-      setEntries(entries.map(entry => 
-        entry._id === updatedEntry._id ? updatedEntry : entry
-      ));
-      resetForms();
-    } catch (err) {
-      setError('Failed to update diary entry');
     }
   };
 
@@ -131,19 +89,32 @@ export default function DiaryPage() {
     }
   };
 
+  if (status === 'loading') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    return null;
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold">My Diary</h1>
-          {!showAddForm && !editingEntry && (
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
-            >
-              Add New Entry
-            </button>
-          )}
+          <button
+            onClick={() => {
+              setSelectedEntry(undefined);
+              setIsModalOpen(true);
+            }}
+            className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+          >
+            Add New Entry
+          </button>
         </div>
         
         {/* Search and Filter */}
@@ -168,171 +139,19 @@ export default function DiaryPage() {
         </div>
       </div>
 
-      {/* Add Entry Form */}
-      {showAddForm && (
-        <div className="mb-8 bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold mb-4">Add New Entry</h2>
-          <form onSubmit={handleSubmit}>
-            {/* Form fields */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Title
-              </label>
-              <input
-                type="text"
-                value={newEntry.title}
-                onChange={(e) => setNewEntry({...newEntry, title: e.target.value})}
-                className="w-full px-3 py-2 border rounded-md"
-                required
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Content
-              </label>
-              <textarea
-                value={newEntry.content}
-                onChange={(e) => setNewEntry({...newEntry, content: e.target.value})}
-                className="w-full px-3 py-2 border rounded-md"
-                rows={6}
-                required
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                value={newEntry.category}
-                onChange={(e) => setNewEntry({...newEntry, category: e.target.value})}
-                className="w-full px-3 py-2 border rounded-md"
-              >
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tags (comma-separated)
-              </label>
-              <input
-                type="text"
-                value={newEntry.tags}
-                onChange={(e) => setNewEntry({...newEntry, tags: e.target.value})}
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="e.g., work, important, personal"
-              />
-            </div>
-
-            {error && (
-              <div className="text-red-600 mb-4">{error}</div>
-            )}
-
-            <div className="flex gap-4">
-              <button
-                type="submit"
-                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-              >
-                Add Entry
-              </button>
-              <button
-                type="button"
-                onClick={() => resetForms()}
-                className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
+      {error && (
+        <div className="text-red-600 mb-4">{error}</div>
       )}
 
-      {/* Edit Entry Form */}
-      {editingEntry && (
-        <div className="mb-8 bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold mb-4">Edit Entry</h2>
-          <form onSubmit={handleUpdate}>
-            {/* Form fields */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Title
-              </label>
-              <input
-                type="text"
-                value={editingEntry.title}
-                onChange={(e) => setEditingEntry({...editingEntry, title: e.target.value})}
-                className="w-full px-3 py-2 border rounded-md"
-                required
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Content
-              </label>
-              <textarea
-                value={editingEntry.content}
-                onChange={(e) => setEditingEntry({...editingEntry, content: e.target.value})}
-                className="w-full px-3 py-2 border rounded-md"
-                rows={6}
-                required
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                value={editingEntry.category}
-                onChange={(e) => setEditingEntry({...editingEntry, category: e.target.value})}
-                className="w-full px-3 py-2 border rounded-md"
-              >
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tags (comma-separated)
-              </label>
-              <input
-                type="text"
-                value={Array.isArray(editingEntry.tags) ? editingEntry.tags.join(', ') : ''}
-                onChange={(e) => setEditingEntry({...editingEntry, tags: e.target.value.split(',').map(tag => tag.trim())})}
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="e.g., work, important, personal"
-              />
-            </div>
-
-            {error && (
-              <div className="text-red-600 mb-4">{error}</div>
-            )}
-
-            <div className="flex gap-4">
-              <button
-                type="submit"
-                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-              >
-                Update Entry
-              </button>
-              <button
-                type="button"
-                onClick={() => resetForms()}
-                className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      <DiaryModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedEntry(undefined);
+        }}
+        onSave={handleSave}
+        entry={selectedEntry}
+      />
 
       {/* Entries List */}
       <div className="space-y-6">
@@ -342,7 +161,10 @@ export default function DiaryPage() {
               <h2 className="text-xl font-semibold">{entry.title}</h2>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setEditingEntry(entry)}
+                  onClick={() => {
+                    setSelectedEntry(entry);
+                    setIsModalOpen(true);
+                  }}
                   className="text-blue-500 hover:text-blue-700"
                 >
                   Edit

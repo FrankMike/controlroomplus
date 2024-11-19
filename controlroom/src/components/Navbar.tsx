@@ -3,12 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState } from 'react';
 
 export default function Navbar() {
   const pathname = usePathname();
   const { isAuthenticated, isLoading, logout } = useAuth();
-  const [isMediaOpen, setIsMediaOpen] = useState(false);
 
   const isActive = (path: string) => {
     return pathname === path;

@@ -10,7 +10,7 @@ export class PlexAPI {
   private config: PlexConfig;
   private parser: XMLParser;
 
-  constructor(config: PlexConfig) {
+  constructor() {
     if (process.env.PLEX_URL && process.env.PLEX_TOKEN) {
       this.config = { url: process.env.PLEX_URL, token: process.env.PLEX_TOKEN };
     } else {
@@ -217,7 +217,4 @@ export class PlexAPI {
   }
 }
 
-export const plexApi = new PlexAPI({
-  url: process.env.PLEX_URL || '',
-  token: process.env.PLEX_TOKEN || '',
-}); 
+export const plexApi = new PlexAPI(); 

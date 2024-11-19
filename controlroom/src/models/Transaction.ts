@@ -20,8 +20,18 @@ const transactionSchema = new Schema<ITransaction>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret) {
+    transform: function(_doc, ret) {
       ret._id = ret._id.toString();
+      ret.date = ret.date.toISOString();
+      if (ret.recurrenceEndDate) {
+        ret.recurrenceEndDate = ret.recurrenceEndDate.toISOString();
+      }
+      if (ret.createdAt) {
+        ret.createdAt = ret.createdAt.toISOString();
+      }
+      if (ret.updatedAt) {
+        ret.updatedAt = ret.updatedAt.toISOString();
+      }
       return ret;
     }
   }

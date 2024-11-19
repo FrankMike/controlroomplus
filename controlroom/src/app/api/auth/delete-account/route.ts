@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { connectToDatabase } from '@/lib/mongodb';
 import mongoose from 'mongoose';
 
-export async function DELETE(req: Request) {
+export async function DELETE() {
   try {
     const session = await getServerSession();
     if (!session) {

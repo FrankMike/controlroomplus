@@ -9,5 +9,14 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=password123
 
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGO_URI=mongodb://admin:password123@mongodb:27017/controlroom
+    depends_on:
+      - mongodb
+
 volumes:
   mongodb_data: 
