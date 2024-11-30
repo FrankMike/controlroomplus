@@ -12,10 +12,19 @@ export default function Home() {
   const { totalCount, totalSize, isLoading: moviesLoading } = useMovieStats();
   const { totalShows, totalEpisodes, totalSize: tvShowTotalSize, isLoading: tvShowsLoading } = useTvShowStats();
 
+  // Format current date
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
   // Show loading state while authentication is being checked
   if (authLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
+        <div className="text-right text-gray-600 mb-4">{currentDate}</div>
         <h1 className="text-3xl font-bold text-center mb-12">Welcome!</h1>
         <LoadingSpinner />
       </div>
@@ -26,6 +35,7 @@ export default function Home() {
   if (!isAuthenticated) {
     return (
       <div className="container mx-auto px-4 py-8">
+        <div className="text-right text-gray-600 mb-4">{currentDate}</div>
         <h1 className="text-3xl font-bold text-center mb-12">Welcome!</h1>
         <div className="text-center mt-8">
           <p className="text-gray-600 mb-4">Please log in to access your personal dashboard.</p>
@@ -51,6 +61,7 @@ export default function Home() {
   // Show authenticated content
   return (
     <div className="container mx-auto px-4 py-8">
+      <div className="text-right text-gray-600 mb-4">{currentDate}</div>
       <h1 className="text-3xl font-bold text-center mb-12">
         {user?.name ? `Welcome ${user.name}!` : 'Welcome!'}
       </h1>

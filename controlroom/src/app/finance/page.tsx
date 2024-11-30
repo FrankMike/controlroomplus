@@ -11,6 +11,8 @@ import {
   updateTransaction, 
   deleteTransaction 
 } from '@/app/actions/transactionActions';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function FinancePage() {
   const router = useRouter();
@@ -168,6 +170,83 @@ export default function FinancePage() {
     });
   };
 
+  const generateMonthlyPDF = (transactions: ITransaction[], monthlyStats: any) => {
+    const doc = new jsPDF();
+    const currentDate = new Date();
+    const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
+    const currentYear = currentDate.getFullYear();
+
+    // Add title
+    doc.setFontSize(20);
+    doc.text(`Monthly Financial Report - ${currentMonth} ${currentYear}`, 14, 20);
+
+    // Add summary section
+    doc.setFontSize(12);
+    doc.text('Monthly Summary:', 14, 40);
+    doc.text(`Total Income: $${monthlyStats.totalIncome.toFixed(2)}`, 14, 50);
+    doc.text(`Total Expenses: $${monthlyStats.totalExpenses.toFixed(2)}`, 14, 60);
+    doc.text(`Balance: $${monthlyStats.balance.toFixed(2)}`, 14, 70);
+
+    // Filter transactions for current month
+    const monthlyTransactions = transactions.filter(transaction => {
+      const transactionDate = new Date(transaction.date);
+      return transactionDate.getMonth() === currentDate.getMonth() &&
+             transactionDate.getFullYear() === currentDate.getFullYear();
+    });
+
+    // Add transactions table
+    autoTable(doc, {
+      startY: 80,
+      head: [['Date', 'Description', 'Type', 'Amount']],
+      body: monthlyTransactions.map(transaction => [
+        formatDate(transaction.date),
+        transaction.description,
+        transaction.type,
+        formatAmount(transaction.amount, transaction.type)
+      ]),
+    });
+
+    // Save the PDF
+    doc.save(`monthly_report_${currentMonth.toLowerCase()}_${currentYear}.pdf`);
+  };
+
+  const generateYearlyPDF = (transactions: ITransaction[], yearlyStats: any) => {
+    const doc = new jsPDF();
+    const currentYear = new Date().getFullYear();
+
+    // Add title
+    doc.setFontSize(20);
+    doc.text(`Yearly Financial Report - ${currentYear}`, 14, 20);
+
+    // Add summary section
+    doc.setFontSize(12);
+    doc.text('Yearly Summary:', 14, 40);
+    doc.text(`Total Income: $${yearlyStats.totalIncome.toFixed(2)}`, 14, 50);
+    doc.text(`Total Expenses: $${yearlyStats.totalExpenses.toFixed(2)}`, 14, 60);
+    doc.text(`Balance: $${yearlyStats.balance.toFixed(2)}`, 14, 70);
+
+    // Filter transactions for current year
+    const yearlyTransactions = transactions.filter(transaction => {
+      const transactionDate = new Date(transaction.date);
+      return transactionDate.getFullYear() === currentYear;
+    });
+
+    // Add transactions table
+    autoTable(doc, {
+      startY: 80,
+      head: [['Date', 'Description', 'Type', 'Amount']],
+      body: yearlyTransactions.map(transaction => [
+        formatDate(transaction.date),
+        transaction.description,
+        transaction.type,
+        formatAmount(transaction.amount, transaction.type)
+      ]),
+    });
+
+    // Save the PDF
+    doc.save(`yearly_report_${currentYear}.pdf`);
+  };
+
   // Show loading state
   if (status === 'loading') {
     return (
@@ -190,7 +269,15 @@ export default function FinancePage() {
 
       <div className="space-y-8">
         <div>
-          <h2 className="text-xl font-semibold mb-4">Monthly Summary</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Monthly Summary</h2>
+            <button
+              onClick={() => generateMonthlyPDF(transactions, monthlyStats)}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-500 text-sm"
+            >
+              Download Monthly Report
+            </button>
+          </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-sm text-gray-500 uppercase mb-2">Monthly Income</h2>
@@ -223,7 +310,15 @@ export default function FinancePage() {
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold mb-4">Yearly Summary</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Yearly Summary</h2>
+            <button
+              onClick={() => generateYearlyPDF(transactions, yearlyStats)}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-500 text-sm"
+            >
+              Download Yearly Report
+            </button>
+          </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-sm text-gray-500 uppercase mb-2">Yearly Income</h2>
